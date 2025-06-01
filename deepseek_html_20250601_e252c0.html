@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تحلیل خطاهای مشترک - گزارش اسنپ فود</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IRANSans+Web:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #FF5A5F;
+            --secondary-color: #00A699;
+            --accent-color: #FC642D;
+            --dark-color: #484848;
+            --light-color: #f7f7f7;
+        }
+        
+        body {
+            font-family: 'IRANSans Web', Tahoma, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #fafafa;
+            direction: rtl;
+            color: var(--dark-color);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 30px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            margin: 0;
+            font-size: 28px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: var(--dark-color);
+            margin: 10px 0 0;
+            font-size: 16px;
+        }
+        
+        .logo {
+            height: 50px;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .chart-type-controls, .filter-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+        }
+        
+        label {
+            font-weight: 500;
+            margin-left: 8px;
+            color: var(--dark-color);
+        }
+        
+        select, button {
+            padding: 10px 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: 'IRANSans Web';
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        
+        select {
+            background-color: white;
+            min-width: 120px;
+        }
+        
+        button {
+            cursor: pointer;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .primary-btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+        }
+        
+        .secondary-btn {
+            background-color: white;
+            color: var(--primary-color);
+            border: 1px solid var(--primary-color);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .error-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+        
+        .error-item {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid #eee;
+            background-color: white;
+        }
+        
+        .error-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .error-item.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 500px;
+            margin: 30px 0;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .chart-type-controls, .filter-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .control-group {
+                margin-bottom: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="https://snappfood.ir/static/images/snappfood-logo.svg" alt="Snappfood Logo" class="logo">
+            <h1>تحلیل خطاهای مشترک در بازه‌های زمانی مختلف</h1>
+            <p>مقایسه سهم هر خطا در بازه‌های زمانی مشخص</p>
+        </div>
+        
+        <div class="controls">
+            <div class="chart-type-controls">
+                <div class="control-group">
+                    <label for="chartType">نوع نمودار:</label>
+                    <select id="chartType">
+                        <option value="bar">ستونی</option>
+                        <option value="line">خطی</option>
+                        <option value="radar">رادار</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="filter-controls">
+                <button id="showAll" class="primary-btn">
+                    <span>نمایش همه خطاها</span>
+                </button>
+                <button id="showCommon" class="secondary-btn">
+                    <span>فقط خطاهای مشترک</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="errorFilters" class="error-filters">
+            <!-- فیلترهای خطاها اینجا ایجاد می‌شوند -->
+        </div>
+        
+        <div class="chart-container">
+            <canvas id="comparisonChart"></canvas>
+        </div>
+        
+        <div class="footer">
+            گزارش تحلیلی اسنپ فود - داده‌های دوره‌های زمانی مختلف
+        </div>
+    </div>
+
+    <script>
+        // داده‌های خام
+        const rawData = {
+            periods: [
+                "۱۹ بهمن - ۱۴ اسفند", 
+                "۱۵ اسفند - ۲۶ اسفند", 
+                "۱۳ فروردین - ۱۹ فروردین", 
+                "۲۰ فروردین - ۲۶ فروردین", 
+                "۲۷ فروردین - ۲ اردیبهشت", 
+                "۳ اردیبهشت - ۹ اردیبهشت", 
+                "۱۰ اردیبهشت - ۱۶ اردیبهشت"
+            ],
+            errors: [
+                {
+                    name: "عدم رعایت اسکریپت ها",
+                    values: [23.97, 19.60, 22.20, 14.89, 9.94, 12.15, 6.32]
+                },
+                {
+                    name: "عدم دلجویی و تشکر",
+                    values: [13.70, null, 8.40, 8.25, 8.07, null, 6.32]
+                },
+                {
+                    name: "عدم تماس با مشتری یا وندور",
+                    values: [7.50, null, 6.70, 4.35, 5.59, null, 6.46]
+                },
+                {
+                    name: "ثبت تیکت یا کامنت نادرست",
+                    values: [6.48, null, null, null, null, null, null]
+                },
+                {
+                    name: "عدم اطلاع رسانی",
+                    values: [null, 13.81, null, null, null, null, null]
+                },
+                {
+                    name: "عدم تماس (پیگیری)",
+                    values: [null, 7.34, null, null, null, null, null]
+                },
+                {
+                    name: "قطع یا همزمان صحبت کردن",
+                    values: [null, 6.66, null, null, null, null, null]
+                },
+                {
+                    name: "عدم رعایت تعداد و فاصله تماس با مشتری",
+                    values: [null, null, null, 3.15, null, null, 7.02]
+                },
+                {
+                    name: "تماس اضافه با وندور",
+                    values: [null, null, null, 3.15, null, null, null]
+                },
+                {
+                    name: "مشکلات راهنمایی",
+                    values: [null, null, null, null, null, 7.23, null]
+                },
+                {
+                    name: "عدم رعایت تعداد و فاصله تماس با وندور",
+                    values: [null, null, null, null, null, null, 7.02]
+                }
+            ]
+        };
+
+        // پالت رنگی اسنپ فودی
+        const snappfoodPalette = [
+            '#FF5A5F', '#00A699', '#FC642D', '#484848', 
+            '#767676', '#CACACA', '#4285F4', '#34A853',
+            '#EA4335', '#FBBC05', '#673AB7'
+        ];
+
+        // ایجاد فیلترهای خطاها
+        const errorFiltersContainer = document.getElementById('errorFilters');
+        rawData.errors.forEach((error, index) => {
+            const errorItem = document.createElement('div');
+            errorItem.className = 'error-item';
+            errorItem.textContent = error.name;
+            errorItem.dataset.index = index;
+            errorItem.style.borderColor = snappfoodPalette[index % snappfoodPalette.length];
+            errorItem.addEventListener('click', toggleError);
+            errorFiltersContainer.appendChild(errorItem);
+        });
+
+        // فعال کردن همه خطاها به صورت پیش‌فرض
+        const errorItems = document.querySelectorAll('.error-item');
+        errorItems.forEach(item => item.classList.add('active'));
+        let activeErrors = Array.from(errorItems).map(item => parseInt(item.dataset.index));
+
+        // ایجاد نمودار اولیه
+        const ctx = document.getElementById('comparisonChart').getContext('2d');
+        let chart = createChart('bar');
+
+        // تغییر نوع نمودار
+        document.getElementById('chartType').addEventListener('change', function() {
+            chart.destroy();
+            chart = createChart(this.value);
+        });
+
+        // نمایش همه خطاها
+        document.getElementById('showAll').addEventListener('click', function() {
+            errorItems.forEach(item => item.classList.add('active'));
+            activeErrors = Array.from(errorItems).map(item => parseInt(item.dataset.index));
+            updateChart();
+        });
+
+        // نمایش فقط خطاهای مشترک در همه بازه‌ها
+        document.getElementById('showCommon').addEventListener('click', function() {
+            errorItems.forEach(item => item.classList.remove('active'));
+            
+            // پیدا کردن خطاهایی که در همه بازه‌ها وجود دارند
+            const commonErrors = rawData.errors.map((error, index) => {
+                const hasAllValues = error.values.every(val => val !== null);
+                return hasAllValues ? index : null;
+            }).filter(index => index !== null);
+            
+            commonErrors.forEach(index => {
+                errorItems[index].classList.add('active');
+            });
+            
+            activeErrors = commonErrors;
+            updateChart();
+        });
+
+        // تابع برای ایجاد نمودار
+        function createChart(type) {
+            const datasets = [];
+            
+            activeErrors.forEach(errorIndex => {
+                const error = rawData.errors[errorIndex];
+                const color = snappfoodPalette[errorIndex % snappfoodPalette.length];
+                
+                datasets.push({
+                    label: error.name,
+                    data: error.values,
+                    backgroundColor: color,
+                    borderColor: color,
+                    borderWidth: 2,
+                    fill: false,
+                    tension: 0.1,
+                    datalabels: {
+                        align: 'end',
+                        anchor: 'end',
+                        color: type === 'radar' ? color : '#555',
+                        font: {
+                            weight: 'bold'
+                        },
+                        formatter: function(value) {
+                            return value !== null ? value + '%' : '';
+                        }
+                    }
+                });
+            });
+
+            return new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: rawData.periods,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            rtl: true,
+                            labels: {
+                                usePointStyle: true,
+                                padding: 20,
+                                font: {
+                                    family: 'IRANSans Web',
+                                    size: 12
+                                }
+                            }
+                        },
+                        tooltip: {
+                            rtl: true,
+                            backgroundColor: 'rgba(0,0,0,0.8)',
+                            titleFont: {
+                                family: 'IRANSans Web',
+                                size: 14,
+                                weight: 'bold'
+                            },
+                            bodyFont: {
+                                family: 'IRANSans Web',
+                                size: 12
+                            },
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.dataset.label}: ${context.raw}%`;
+                                }
+                            }
+                        },
+                        datalabels: {
+                            display: type !== 'radar',
+                            color: '#555',
+                            font: {
+                                family: 'IRANSans Web',
+                                size: 10,
+                                weight: 'bold'
+                            },
+                            formatter: function(value) {
+                                return value !== null ? value + '%' : '';
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'درصد سهم',
+                                font: {
+                                    family: 'IRANSans Web',
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'IRANSans Web'
+                                },
+                                callback: function(value) {
+                                    return value + '%';
+                                }
+                            },
+                            grid: {
+                                color: 'rgba(0,0,0,0.05)'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'بازه زمانی',
+                                font: {
+                                    family: 'IRANSans Web',
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            },
+                            ticks: {
+                                font: {
+                                    family: 'IRANSans Web'
+                                }
+                            },
+                            grid: {
+                                display: false
+                            }
+                        }
+                    },
+                    elements: {
+                        bar: {
+                            borderRadius: 6
+                        }
+                    },
+                    layout: {
+                        padding: {
+                            top: 20,
+                            right: 20,
+                            bottom: 20,
+                            left: 20
+                        }
+                    }
+                },
+                plugins: [ChartDataLabels]
+            });
+        }
+
+        // تابع برای تغییر وضعیت فیلتر خطاها
+        function toggleError() {
+            this.classList.toggle('active');
+            updateActiveErrors();
+        }
+
+        // تابع برای به‌روزرسانی خطاهای فعال
+        function updateActiveErrors() {
+            activeErrors = [];
+            document.querySelectorAll('.error-item.active').forEach(item => {
+                activeErrors.push(parseInt(item.dataset.index));
+            });
+            updateChart();
+        }
+
+        // تابع برای به‌روزرسانی نمودار
+        function updateChart() {
+            chart.destroy();
+            chart = createChart(document.getElementById('chartType').value);
+        }
+    </script>
+</body>
+</html>
